@@ -1,0 +1,10 @@
+# A API tem acesso total aos topicos do CronoMed.
+user cronomed-api
+topic readwrite cronomed/#
+
+# Cada caixa (usuario MQTT = MAC sem separadores, ex.: AABBCCDDEEFF) so enxerga os proprios topicos:
+#   publica em  events e heartbeat; le  plan e acks.
+pattern write cronomed/devices/%u/events
+pattern write cronomed/devices/%u/heartbeat
+pattern read  cronomed/devices/%u/plan
+pattern read  cronomed/devices/%u/acks

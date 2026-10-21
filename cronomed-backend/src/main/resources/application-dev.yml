@@ -1,0 +1,11 @@
+# Perfil de desenvolvimento local: SPRING_PROFILES_ACTIVE=dev
+cronomed:
+  jwt:
+    secret: dev-only-secret-change-me-0123456789abcdef-cronomed
+  security:
+    cookie-secure: false
+  mail:
+    enabled: false      # o codigo OTP de redefinicao de senha aparece no log da API
+logging:
+  level:
+    br.com.cronomed: DEBUG

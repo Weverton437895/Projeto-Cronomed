@@ -1,0 +1,336 @@
+### CronoMed - teste de ponta a ponta (IntelliJ HTTP Client)
+###
+### Como usar:
+###   1. Suba o banco (docker compose up -d postgres) e rode a CronomedApplication.
+###   2. Abra este arquivo no IntelliJ e clique no botao "Run all requests in file"
+###      (icone de dois triangulos verdes, no topo do arquivo).
+###   3. Veja a aba "Tests" no painel de execucao: cada verificacao aparece como PASSED/FAILED.
+###
+### Cada execucao cria um usuario, uma caixa (MAC) e um paciente novos, entao pode rodar quantas vezes quiser.
+
+@host = http://localhost:8080
+@password = Senha12345
+
+### 0. Sem token deve ser recusado (401)
+GET {{host}}/api/v1/users/me
+
+> {%
+client.test("sem token -> 401", function () {
+    client.assert(response.status === 401, "esperava 401, veio " + response.status);
+});
+%}
+
+### 1. Cadastro
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "Teste Automatico",
+  "email": "{{$random.email}}",
+  "password": "{{password}}",
+  "profileType": "PACIENTE",
+  "createSelfPatient": true,
+  "acceptTerms": true
+}
+
+> {%
+client.test("cadastro -> 201", function () {
+    client.assert(response.status === 201, "esperava 201, veio " + response.status);
+});
+client.global.set("email", response.body.email);
+
+// MAC aleatorio para nao colidir entre execucoes
+var h = function () { return Math.floor(Math.random() * 256).toString(16).padStart(2, "0").toUpperCase(); };
+client.global.set("mac", [h(), h(), h(), h(), h(), h()].join(":"));
+%}
+
+### 2. Cadastro repetido com o mesmo e-mail deve dar 409
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "Teste Automatico",
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "profileType": "PACIENTE",
+  "createSelfPatient": true,
+  "acceptTerms": true
+}
+
+> {%
+client.test("e-mail repetido -> 409", function () {
+    client.assert(response.status === 409, "esperava 409, veio " + response.status);
+});
+%}
+
+### 3. Login com senha errada deve dar 401
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "senha-errada-123",
+  "clientLabel": "http-client"
+}
+
+> {%
+client.test("senha errada -> 401", function () {
+    client.assert(response.status === 401, "esperava 401, veio " + response.status);
+});
+%}
+
+### 4. Login correto
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "clientLabel": "http-client"
+}
+
+> {%
+client.test("login -> 200 com tokens", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(!!response.body.accessToken, "sem accessToken");
+    client.assert(!!response.body.refreshToken, "sem refreshToken");
+});
+client.global.set("token", response.body.accessToken);
+client.global.set("refresh", response.body.refreshToken);
+%}
+
+### 5. Dados do usuario logado
+GET {{host}}/api/v1/users/me
+Authorization: Bearer {{token}}
+
+> {%
+client.test("users/me -> 200", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(response.body.email === client.global.get("email"), "e-mail diferente");
+});
+%}
+
+### 6. Pacientes (o cadastro criou o paciente do proprio usuario)
+GET {{host}}/api/v1/patients
+Authorization: Bearer {{token}}
+
+> {%
+client.test("1 paciente OWNER", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(response.body.length === 1, "esperava 1 paciente, veio " + response.body.length);
+    client.assert(response.body[0].myAccess === "OWNER", "acesso nao e OWNER");
+});
+client.global.set("patientId", response.body[0].id);
+%}
+
+### 7. Registrar a caixa
+POST {{host}}/api/v1/devices
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "macAddress": "{{mac}}",
+  "name": "Caixa de teste"
+}
+
+> {%
+client.test("caixa -> 201 com 6 compartimentos e secret", function () {
+    client.assert(response.status === 201, "esperava 201, veio " + response.status);
+    client.assert(response.body.device.compartments.length === 6, "esperava 6 compartimentos");
+    client.assert(!!response.body.deviceSecret, "sem deviceSecret");
+});
+client.global.set("deviceId", response.body.device.id);
+var c1 = response.body.device.compartments.filter(function (c) { return c.index === 1; })[0];
+client.global.set("compartmentId", c1.id);
+%}
+
+### 8. Mesmo MAC de novo deve dar 409
+POST {{host}}/api/v1/devices
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "macAddress": "{{mac}}",
+  "name": "Caixa duplicada"
+}
+
+> {%
+client.test("MAC repetido -> 409", function () {
+    client.assert(response.status === 409, "esperava 409, veio " + response.status);
+});
+%}
+
+### 9. Associar o compartimento 1 ao paciente
+PUT {{host}}/api/v1/devices/{{deviceId}}/compartments/{{compartmentId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "patientId": "{{patientId}}"
+}
+
+> {%
+client.test("compartimento associado -> 200", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(response.body.patientId === client.global.get("patientId"), "paciente nao associado");
+});
+%}
+
+### 10. Criar medicamento com dois horarios por dia, estoque 30
+POST {{host}}/api/v1/patients/{{patientId}}/medications
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Losartana",
+  "measure": "comprimido",
+  "dosage": "50 mg",
+  "doseQuantity": 1,
+  "stockAcquired": 30,
+  "minDaysAlert": 3,
+  "compartmentId": "{{compartmentId}}",
+  "schedules": [
+    { "time": "08:00", "daysOfWeek": [] },
+    { "time": "20:00", "daysOfWeek": [] }
+  ]
+}
+
+> {%
+client.test("medicamento -> 201 com estoque 30", function () {
+    client.assert(response.status === 201, "esperava 201, veio " + response.status);
+    client.assert(response.body.stockCurrent === 30, "estoque esperado 30, veio " + response.body.stockCurrent);
+    client.assert(response.body.daysRemaining === 15, "dias restantes esperado 15, veio " + response.body.daysRemaining);
+});
+client.global.set("medId", response.body.id);
+%}
+
+### 11. Doses geradas para as proximas 48 horas
+GET {{host}}/api/v1/patients/{{patientId}}/doses/upcoming?hours=48
+Authorization: Bearer {{token}}
+
+> {%
+client.test("existem doses pendentes", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(response.body.length >= 2, "esperava ao menos 2 doses em 48h, vieram " + response.body.length);
+});
+client.global.set("doseId", response.body[0].id);
+
+// UUID aleatorio para o evento (chave de idempotencia)
+var u = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (ch) {
+    var r = Math.random() * 16 | 0;
+    return (ch === "x" ? r : (r & 3 | 8)).toString(16);
+});
+client.global.set("eventId", u);
+%}
+
+### 12. Confirmar a dose (tomei)
+POST {{host}}/api/v1/doses/{{doseId}}/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "eventId": "{{eventId}}",
+  "type": "CONFIRMED_YES"
+}
+
+> {%
+client.test("confirmacao aplicada", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(response.body.result === "APPLIED", "resultado esperado APPLIED, veio " + response.body.result);
+});
+%}
+
+### 13. Reenviar o MESMO evento (idempotencia: nao pode baixar estoque de novo)
+POST {{host}}/api/v1/doses/{{doseId}}/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "eventId": "{{eventId}}",
+  "type": "CONFIRMED_YES"
+}
+
+> {%
+client.test("evento repetido -> DUPLICATE", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(response.body.result === "DUPLICATE", "resultado esperado DUPLICATE, veio " + response.body.result);
+});
+%}
+
+### 14. O estoque deve ter caido so uma vez: 30 -> 29
+GET {{host}}/api/v1/medications/{{medId}}
+Authorization: Bearer {{token}}
+
+> {%
+client.test("estoque 29 (baixou uma unica vez)", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(response.body.stockCurrent === 29, "estoque esperado 29, veio " + response.body.stockCurrent);
+});
+%}
+
+### 15. Reabastecer 10 unidades -> 39
+POST {{host}}/api/v1/medications/{{medId}}/refill
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quantity": 10
+}
+
+> {%
+client.test("reabastecimento -> estoque 39", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(response.body.stockCurrent === 39, "estoque esperado 39, veio " + response.body.stockCurrent);
+});
+%}
+
+### 16. Painel do paciente
+GET {{host}}/api/v1/patients/{{patientId}}/dashboard
+Authorization: Bearer {{token}}
+
+> {%
+client.test("dashboard -> 200", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+});
+%}
+
+### 17. Plano que a caixa receberia (so numeros)
+GET {{host}}/api/v1/devices/{{deviceId}}/plan
+Authorization: Bearer {{token}}
+
+> {%
+client.test("plano da caixa -> 200 com doses", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(response.body.doses.length >= 1, "plano sem doses");
+});
+%}
+
+### 18. Renovar o token (refresh)
+POST {{host}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh}}"
+}
+
+> {%
+client.test("refresh -> 200 com novo token", function () {
+    client.assert(response.status === 200, "esperava 200, veio " + response.status);
+    client.assert(!!response.body.accessToken, "sem accessToken novo");
+});
+client.global.set("refresh_old", client.global.get("refresh"));
+%}
+
+### 19. O refresh antigo nao pode ser usado de novo (rotacao)
+POST {{host}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh_old}}"
+}
+
+> {%
+client.test("refresh reaproveitado -> 401", function () {
+    client.assert(response.status === 401, "esperava 401, veio " + response.status);
+});
+%}

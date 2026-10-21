@@ -1,0 +1,8 @@
+target/
+.idea/
+*.iml
+.vscode/
+.env
+*.log
+docker/mosquitto/passwd
+firebase-service-account.json

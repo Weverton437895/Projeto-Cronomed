@@ -1,0 +1,13 @@
+# Perfil de producao: SPRING_PROFILES_ACTIVE=prod
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+management:
+  endpoint:
+    health:
+      show-details: never
+cronomed:
+  security:
+    cookie-secure: true

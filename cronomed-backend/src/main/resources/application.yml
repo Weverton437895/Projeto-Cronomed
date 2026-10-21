@@ -1,0 +1,110 @@
+# CronoMed - configuracao base. Valores sensiveis SEMPRE por variavel de ambiente (RNF05).
+spring:
+  application:
+    name: cronomed-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/cronomed}
+    username: ${DB_USER:cronomed}
+    password: ${DB_PASSWORD:cronomed}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate          # o schema e gerenciado pelo Flyway (db/migration)
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:25}
+    username: ${MAIL_USER:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
+
+server:
+  port: 8080
+  shutdown: graceful
+  forward-headers-strategy: framework   # respeita X-Forwarded-* do proxy/balanceador (HTTPS/TLS termina la)
+  error:
+    include-message: never
+    include-stacktrace: never
+
+# Actuator em porta separada (8081): NAO publique essa porta na internet; apenas Prometheus/orquestrador.
+management:
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    mail:
+      enabled: false
+  metrics:
+    tags:
+      application: cronomed-backend
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+
+cronomed:
+  jwt:
+    secret: ${JWT_SECRET}              # >= 32 caracteres; gere com: openssl rand -base64 48
+    issuer: cronomed
+    access-ttl: 15m
+    refresh-ttl: 7d
+    device-ttl: 24h
+  security:
+    cookie-secure: ${COOKIE_SECURE:true}
+    bcrypt-strength: 10
+    max-failed-logins: 5
+    lock-duration: 15m
+    otp-ttl: 10m
+    otp-max-attempts: 5
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  mqtt:
+    enabled: ${MQTT_ENABLED:false}
+    broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}   # producao: ssl://broker:8883
+    username: ${MQTT_USERNAME:}
+    password: ${MQTT_PASSWORD:}
+    client-id: cronomed-api
+    topic-prefix: cronomed/devices
+  fcm:
+    enabled: ${FCM_ENABLED:false}
+    credentials-path: ${FCM_CREDENTIALS_PATH:}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:no-reply@cronomed.local}
+  dose:
+    tolerance-minutes: 60
+    reconcile-grace-minutes: 5
+    plan-horizon-days: 7
+  device:
+    offline-after-minutes: 5
+    battery-critical-percent: 20
+    max-per-owner: 5
+    max-patients-per-owner: 5
+  scheduling:
+    enabled: true
+
+logging:
+  level:
+    root: INFO
+    br.com.cronomed: INFO

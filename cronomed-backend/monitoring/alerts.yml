@@ -1,0 +1,17 @@
+groups:
+  - name: cronomed
+    rules:
+      - alert: FcmFalhasAcimaDe5Porcento
+        expr: |
+          sum(rate(cronomed_fcm_failed_total[10m]))
+            / clamp_min(sum(rate(cronomed_fcm_sent_total[10m])) + sum(rate(cronomed_fcm_failed_total[10m])), 0.001) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Mais de 5% das notificacoes FCM estao falhando"
+      - alert: Api5xxAlta
+        expr: sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) > 1
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Taxa alta de erros 5xx na API"

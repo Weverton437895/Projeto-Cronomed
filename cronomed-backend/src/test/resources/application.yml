@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:cronomed;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+cronomed:
+  jwt:
+    secret: test-secret-test-secret-test-secret-test-secret
+  security:
+    cookie-secure: false
+    bcrypt-strength: 4
+  scheduling:
+    enabled: false
+  mqtt:
+    enabled: false
+  fcm:
+    enabled: false
