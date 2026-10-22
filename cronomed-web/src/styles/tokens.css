@@ -1,0 +1,64 @@
+/* Design tokens do CronoMed (identidade visual: paleta, neutros, estados, tipografia Roboto). */
+:root {
+  --blue: #1e4f7c;          /* Azul principal */
+  --blue-2: #5b9bd5;        /* Azul secundario */
+  --ink: #1a1a1a;           /* Preto / cinza escuro */
+  --bg: #f5f7fa;            /* Fundo das telas */
+  --border: #dae3ec;        /* Divisorias */
+  --border-strong: #b9c8da; /* Contorno de campos */
+  --tint: #e6eff8;          /* Destaques suaves */
+  --text-2: #4a5f73;        /* Texto de apoio */
+  --navy: #0f2b45;          /* Rodape e secoes escuras */
+  --surface: #ffffff;
+  --cream: #fbf7e8;
+
+  --success: #1e7a46;
+  --success-bg: #e1f2e7;
+  --warning: #7a4e00;
+  --warning-bg: #fdefd0;
+  --warning-line: #f2dca6;
+  --danger: #a3231b;
+  --danger-bg: #fbe3e1;
+  --focus: #5b9bd5;
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --shadow: 0 1px 2px rgba(15, 43, 69, 0.04), 0 8px 24px rgba(15, 43, 69, 0.06);
+  --shadow-pop: 0 12px 40px rgba(15, 43, 69, 0.22);
+
+  --font: 'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  --sidebar-w: 292px;
+  --topbar-h: 92px;
+}
+
+/* Tamanho do texto (Configuracoes > Acessibilidade): Padrao / Grande / Extra grande. */
+html[data-font='large'] { font-size: 112.5%; }
+html[data-font='xlarge'] { font-size: 125%; }
+
+/* Alto contraste: relacao minima de 7:1 (WCAG AAA). */
+html[data-contrast='high'] {
+  --blue: #0a2a4a;
+  --blue-2: #0a2a4a;
+  --ink: #000000;
+  --bg: #ffffff;
+  --border: #000000;
+  --border-strong: #000000;
+  --tint: #ffffff;
+  --text-2: #1a1a1a;
+  --navy: #000000;
+  --success: #064d24;
+  --success-bg: #ffffff;
+  --warning: #4a2e00;
+  --warning-bg: #ffffff;
+  --warning-line: #4a2e00;
+  --danger: #7a0f09;
+  --danger-bg: #ffffff;
+  --focus: #000000;
+  --shadow: none;
+}
+html[data-contrast='high'] .badge,
+html[data-contrast='high'] .card,
+html[data-contrast='high'] .input,
+html[data-contrast='high'] .select,
+html[data-contrast='high'] .textarea { border: 2px solid #000; }
