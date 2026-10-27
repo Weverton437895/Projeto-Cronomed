@@ -1,0 +1,10 @@
+*.iml
+.gradle/
+local.properties
+.idea/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+# Configuração do Firebase do SEU projeto: não versione
+app/google-services.json

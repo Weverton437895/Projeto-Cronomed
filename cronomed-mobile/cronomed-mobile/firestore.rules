@@ -1,0 +1,119 @@
+rules_version = '2';
+
+// Regras de segurança do CronoMed (Cloud Firestore).
+// Cole este arquivo em: Firebase Console > Firestore Database > Regras > Publicar.
+//
+// Ideia geral:
+//   - o id do paciente é o uid do titular (pacientes/{uid});
+//   - o titular enxerga e edita tudo do próprio paciente;
+//   - convidados têm um documento em "acessos" (id = pacienteId_uidDoConvidado) criado
+//     a partir de um convite válido; o campo "nivel" decide se podem editar;
+//   - o código do convite é o "segredo" do link: quem tem o código lê o convite (get),
+//     mas ninguém consegue listar convites de outras pessoas.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+
+    function ehTitular(pid) {
+      return logado() && request.auth.uid == pid;
+    }
+
+    function caminhoAcesso(pid) {
+      return /databases/$(database)/documents/acessos/$(pid + '_' + request.auth.uid);
+    }
+
+    function acessoAtivo(pid) {
+      return logado()
+        && exists(caminhoAcesso(pid))
+        && get(caminhoAcesso(pid)).data.status == 'ATIVO';
+    }
+
+    function podeVer(pid) {
+      return ehTitular(pid) || acessoAtivo(pid);
+    }
+
+    function podeGerenciar(pid) {
+      return ehTitular(pid)
+        || (acessoAtivo(pid) && get(caminhoAcesso(pid)).data.nivel == 'GERENCIAMENTO');
+    }
+
+    // Dados pessoais: só o próprio usuário.
+    match /usuarios/{uid} {
+      allow read, write: if ehTitular(uid);
+    }
+
+    // Paciente (um por titular) e tudo que pertence a ele.
+    match /pacientes/{pid} {
+      allow read: if podeVer(pid);
+      allow create: if ehTitular(pid) && request.resource.data.titularUid == pid;
+      allow update: if ehTitular(pid);
+      allow delete: if ehTitular(pid);
+
+      // Um documento por compartimento da caixa (1 a 6).
+      match /medicamentos/{comp} {
+        allow read: if podeVer(pid);
+        allow write: if podeGerenciar(pid) && comp in ['1', '2', '3', '4', '5', '6'];
+      }
+
+      match /doses/{doseId} {
+        allow read: if podeVer(pid);
+        allow write: if podeGerenciar(pid);
+      }
+
+      match /dispositivos/{dispId} {
+        allow read: if podeVer(pid);
+        allow write: if podeGerenciar(pid);
+      }
+    }
+
+    // Quem pode acompanhar quem.
+    match /acessos/{acessoId} {
+      // Lê o titular do paciente e o próprio convidado.
+      allow read: if logado()
+        && (resource.data.uid == request.auth.uid || resource.data.pacienteId == request.auth.uid);
+
+      // O convidado cria o próprio acesso, e só com um convite pendente, válido e
+      // com o mesmo nível que o titular definiu (não dá para "se promover").
+      allow create: if logado()
+        && request.resource.data.uid == request.auth.uid
+        && acessoId == request.resource.data.pacienteId + '_' + request.auth.uid
+        && request.resource.data.status == 'ATIVO'
+        && conviteValido(request.resource.data.codigoConvite, request.resource.data.pacienteId, request.resource.data.nivel);
+
+      // Só o titular altera nível e status (pausar / reativar).
+      allow update: if ehTitular(resource.data.pacienteId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.pacienteId == resource.data.pacienteId;
+
+      // O titular remove qualquer acesso; o convidado remove o próprio.
+      allow delete: if ehTitular(resource.data.pacienteId) || resource.data.uid == request.auth.uid;
+    }
+
+    function conviteValido(codigo, pid, nivel) {
+      let c = get(/databases/$(database)/documents/convites/$(codigo)).data;
+      return c.pacienteId == pid
+        && c.status == 'PENDENTE'
+        && c.nivel == nivel
+        && c.expiraEm > request.time;
+    }
+
+    match /convites/{codigo} {
+      // Ler um convite exige conhecer o código (que é aleatório e longo).
+      allow get: if true;
+      // Listar: somente os convites do próprio titular.
+      allow list: if logado() && resource.data.pacienteId == request.auth.uid;
+      allow create: if ehTitular(request.resource.data.pacienteId)
+        && request.resource.data.status == 'PENDENTE';
+      // O convidado marca como aceito (e só isso).
+      allow update: if logado()
+        && resource.data.status == 'PENDENTE'
+        && request.resource.data.status == 'ACEITO'
+        && request.resource.data.aceitoPorUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'aceitoPorUid']);
+      allow delete: if ehTitular(resource.data.pacienteId);
+    }
+  }
+}

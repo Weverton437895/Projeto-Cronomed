@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_doses"
+        android:icon="@drawable/ic_clock"
+        android:title="@string/nav_doses" />
+    <item
+        android:id="@+id/nav_medicamentos"
+        android:icon="@drawable/ic_pill"
+        android:title="@string/nav_medicamentos" />
+    <item
+        android:id="@+id/nav_estoque"
+        android:icon="@drawable/ic_box"
+        android:title="@string/nav_estoque" />
+    <item
+        android:id="@+id/nav_historico"
+        android:icon="@drawable/ic_history"
+        android:title="@string/nav_historico" />
+</menu>

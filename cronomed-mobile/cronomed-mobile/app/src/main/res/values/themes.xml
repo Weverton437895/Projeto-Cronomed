@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.CronoMed" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/azul</item>
+        <item name="colorOnPrimary">@color/branco</item>
+        <item name="colorPrimaryContainer">@color/tom_azul</item>
+        <item name="colorOnPrimaryContainer">@color/azul_escuro</item>
+        <item name="colorSecondary">@color/azul_secundario</item>
+        <item name="colorSurface">@color/branco</item>
+        <item name="colorOnSurface">@color/preto</item>
+        <item name="colorOnSurfaceVariant">@color/texto2</item>
+        <item name="colorOutline">@color/borda</item>
+        <item name="colorError">@color/perigo</item>
+        <item name="android:colorBackground">@color/fundo</item>
+        <item name="android:statusBarColor">@color/fundo</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/branco</item>
+        <item name="android:textColorPrimary">@color/preto</item>
+        <item name="android:textColorSecondary">@color/texto2</item>
+    </style>
+
+    <!-- Alto contraste (Configurações > Acessibilidade): contraste mínimo de 7:1 -->
+    <style name="Theme.CronoMed.AltoContraste" parent="Theme.CronoMed">
+        <item name="colorPrimary">@color/azul_escuro</item>
+        <item name="colorOutline">@color/preto</item>
+        <item name="android:colorBackground">@color/branco</item>
+        <item name="android:statusBarColor">@color/branco</item>
+        <item name="colorOnSurfaceVariant">@color/preto</item>
+        <item name="android:textColorSecondary">@color/preto</item>
+    </style>
+
+    <!-- Telas azuis (boas-vindas, lembrete) -->
+    <style name="Theme.CronoMed.Azul" parent="Theme.CronoMed">
+        <item name="android:statusBarColor">@color/azul</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/azul</item>
+        <item name="android:colorBackground">@color/azul</item>
+    </style>
+
+    <!-- Menu lateral: painel que abre sobre a tela, alinhado à direita -->
+    <style name="Theme.CronoMed.Painel" parent="Theme.CronoMed">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.45</item>
+        <item name="android:windowAnimationStyle">@style/Animacao.Painel</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Animacao.Painel" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@anim/entra_direita</item>
+        <item name="android:windowExitAnimation">@anim/sai_direita</item>
+    </style>
+
+    <!-- Texto -->
+    <style name="Texto.Titulo" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">24sp</item>
+    </style>
+    <style name="Texto.Subtitulo">
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+    <style name="Texto.Secao">
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+    <style name="Texto.Rotulo">
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- Botões -->
+    <style name="Botao.Primario" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/azul</item>
+        <item name="android:textColor">@color/branco</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+    <style name="Botao.Contorno" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/azul</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="android:textColor">@color/azul</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+    <style name="Botao.Perigo" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/perigo</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="android:textColor">@color/perigo</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+    <style name="Botao.Branco" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/branco</item>
+        <item name="android:textColor">@color/azul</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+    <style name="Botao.ContornoBranco" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/branco</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="android:textColor">@color/branco</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+    <style name="Botao.Link" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/azul</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Campos de texto -->
+    <style name="Campo" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="boxStrokeColor">@color/azul</item>
+        <item name="hintTextColor">@color/azul</item>
+        <item name="android:layout_marginTop">4dp</item>
+    </style>
+
+    <!-- Selos de estado (cor + texto) -->
+    <style name="Selo">
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:background">@drawable/bg_selo_neutro</item>
+    </style>
+</resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Identidade visual do CronoMed -->
+    <color name="azul">#1E4F7C</color>
+    <color name="azul_secundario">#5B9BD5</color>
+    <color name="preto">#1A1A1A</color>
+    <color name="branco">#FFFFFF</color>
+
+    <color name="fundo">#F5F7FA</color>
+    <color name="borda">#DAE3EC</color>
+    <color name="tom_azul">#E6EFF8</color>
+    <color name="texto2">#4A5F73</color>
+    <color name="azul_escuro">#0F2B45</color>
+    <color name="creme">#F5F2EA</color>
+
+    <color name="sucesso">#1E7A46</color>
+    <color name="sucesso_bg">#E3F3E9</color>
+    <color name="alerta">#7A4E00</color>
+    <color name="alerta_bg">#FFF1D0</color>
+    <color name="alerta_borda">#F1D9A0</color>
+    <color name="perigo">#A3231B</color>
+    <color name="perigo_bg">#FBE4E2</color>
+
+    <!-- Compartimentos: cor + forma + número (RF16/RF17) -->
+    <color name="comp_1">#DD4245</color>
+    <color name="comp_2">#56AF62</color>
+    <color name="comp_3">#F6D331</color>
+    <color name="comp_4">#9E5CA8</color>
+    <color name="comp_5">#5B9BD5</color>
+    <color name="comp_6">#EE8843</color>
+</resources>

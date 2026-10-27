@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <include layout="@layout/view_topo_voltar" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/margem_tela">
+
+                <TextView
+                    
+                    style="@style/Texto.Secao"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/acessibilidade"
+                     />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/swAltoContraste"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="48dp"
+                    android:text="@string/alto_contraste" />
+
+                <TextView
+                    
+                    style="@style/Texto.Rotulo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/alto_contraste_desc"
+                     />
+
+                <TextView
+                    
+                    style="@style/Texto.Rotulo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/tamanho_fonte"
+                     />
+
+                <RadioGroup
+                    android:id="@+id/rgFonte"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <RadioButton
+                        android:id="@+id/rbFontePadrao"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/fonte_padrao" />
+
+                    <RadioButton
+                        android:id="@+id/rbFonteGrande"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/fonte_grande" />
+
+                    <RadioButton
+                        android:id="@+id/rbFonteExtra"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/fonte_extra" />
+                </RadioGroup>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/swNarracao"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="48dp"
+                    android:text="@string/narracao_voz" />
+
+                <TextView
+                    
+                    style="@style/Texto.Rotulo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/narracao_voz_desc"
+                     />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/swComandoVoz"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="48dp"
+                    android:text="@string/comando_voz" />
+
+                <TextView
+                    
+                    style="@style/Texto.Rotulo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/comando_voz_desc"
+                     />
+
+                <TextView
+                    
+                    style="@style/Texto.Secao"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/alertas"
+                     />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/swNotificacoes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="48dp"
+                    android:text="@string/notificacoes_dose" />
+
+                <TextView
+                    
+                    style="@style/Texto.Rotulo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/notificacoes_dose_desc"
+                     />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/swBateria"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="48dp"
+                    android:text="@string/aviso_bateria" />
+
+                <TextView
+                    
+                    style="@style/Texto.Rotulo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/aviso_bateria_desc"
+                     />
+
+                <TextView
+                    
+                    style="@style/Texto.Rotulo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/dias_aviso_estoque"
+                     />
+
+                <Spinner
+                    android:id="@+id/spDiasEstoque"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp" />
+
+                <TextView
+                    android:id="@+id/tvVersao"
+                    style="@style/Texto.Rotulo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    
+                    android:gravity="center" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <include layout="@layout/view_carregando" />
+</FrameLayout>
