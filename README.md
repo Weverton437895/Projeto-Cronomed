@@ -129,16 +129,6 @@ Mensagens de commit: `feat:`, `fix:`, `docs:`, `test:`, `chore:`.
 
 ---
 
-## Equipe
-
-| Área | Responsável |
-|---|---|
-| Back-end – Java/API REST | (preencher) |
-| Back-end – Banco de dados | (preencher) |
-| Web | (preencher) |
-| Mobile | (preencher) |
-| IoT – protótipo, montagem e programação | (preencher) |
-
 ---
 
 ## Documentação
