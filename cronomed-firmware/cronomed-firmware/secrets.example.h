@@ -1,6 +1,8 @@
 // Copie este arquivo para "secrets.h" e preencha. O secrets.h NAO vai para o GitHub (veja .gitignore).
 #pragma once
 
+// Wi-Fi: so e usado se a caixa NAO tiver sido pareada por Bluetooth (modo desenvolvimento).
+// Deixe "nome-da-sua-rede" para forcar o pareamento Bluetooth.
 #define WIFI_SSID "nome-da-sua-rede"
 #define WIFI_PASSWORD "senha-da-rede"
 
@@ -10,9 +12,13 @@
 #define MQTT_PORT 1883
 #define MQTT_USE_TLS 0
 
-// Usuario MQTT da caixa = MAC sem separadores (ex.: AABBCCDDEEFF). A senha e criada no broker com
-//   ./scripts/setup-mosquitto.sh add AABBCCDDEEFF <senha>
-#define MQTT_PASSWORD "senha-mqtt-desta-caixa"
+// Usuario e senha MQTT usados pela caixa.
+//  - Recomendado (pareamento Bluetooth): usuario compartilhado das caixas, criado pelo iniciar-cronomed.ps1
+//    com a senha MQTT_BOX_PASSWORD do .env do backend. O broker so deixa cada caixa ver os proprios topicos.
+//  - Alternativa: deixe MQTT_USER "" e crie um usuario por caixa (usuario = MAC sem separadores):
+//      ./scripts/setup-mosquitto.sh add AABBCCDDEEFF <senha>
+#define MQTT_USER "cronomed-box"
+#define MQTT_PASSWORD "mesma-senha-do-MQTT_BOX_PASSWORD-no-env"
 
 // Opcional: certificado da CA do broker (necessario se MQTT_USE_TLS 1). Sem ele a conexao TLS e
 // aceita sem validar o servidor (use so em desenvolvimento).

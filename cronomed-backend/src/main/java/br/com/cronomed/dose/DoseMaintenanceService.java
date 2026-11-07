@@ -2,6 +2,7 @@ package br.com.cronomed.dose;
 
 import br.com.cronomed.alert.AlertService;
 import br.com.cronomed.alert.AlertType;
+import br.com.cronomed.common.ApiException;
 import br.com.cronomed.common.Source;
 import br.com.cronomed.medication.Medication;
 import br.com.cronomed.medication.MedicationRepository;
@@ -122,6 +123,56 @@ public class DoseMaintenanceService {
             alerts.raiseOnce(patient.getId(), AlertType.DOSE_MISSED, dose.getId(), "Dose nao registrada",
                     "A dose de " + med.getName() + " de " + patient.getName() + " das " + hour
                             + " nao foi confirmada.");
+        }
+        return true;
+    }
+
+    /**
+     * A propria caixa informa que o alarme tocou e a tampa nao foi aberta no tempo limite (60 s). A dose passa a
+     * MISSED na hora (sem esperar a janela de tolerancia), sem baixa de estoque, e o titular e os cuidadores sao
+     * alertados. Idempotente por eventId. Retorna true quando a dose mudou de estado.
+     */
+    @Transactional
+    public boolean recordNotOpened(UUID eventId, UUID doseId, UUID patientId, UUID deviceId, int compartment,
+                                   Instant occurredAt, Long seq) {
+        if (events.existsById(eventId)) {
+            return false;
+        }
+        ScheduledDose dose = doses.findByIdForUpdate(doseId).orElseThrow(() -> ApiException.notFound("Dose"));
+        if (!dose.getPatientId().equals(patientId)) {
+            throw ApiException.badRequest("DOSE_MISMATCH", "Dose nao corresponde ao paciente do compartimento");
+        }
+        Instant now = clock.instant();
+        DoseEvent ev = new DoseEvent();
+        ev.setId(eventId);
+        ev.setScheduledDoseId(dose.getId());
+        ev.setMedicationId(dose.getMedicationId());
+        ev.setPatientId(dose.getPatientId());
+        ev.setDeviceId(deviceId);
+        ev.setCompartmentIndex(compartment);
+        ev.setType(DoseEventType.MISSED);
+        ev.setSource(Source.DEVICE);
+        ev.setOccurredAt(occurredAt != null ? occurredAt : now);
+        ev.setReceivedAt(now);
+        ev.setClientSeq(seq);
+        ev.setJustification("Tampa do compartimento nao aberta em 60 segundos");
+        events.save(ev);
+
+        if (dose.getStatus() != DoseStatus.PENDING) {
+            return false; // ja confirmada/recusada por outro canal
+        }
+        dose.setStatus(DoseStatus.MISSED);
+        dose.setUpdatedAt(now);
+        doses.save(dose);
+
+        Patient patient = patients.findById(dose.getPatientId()).orElse(null);
+        Medication med = medications.findById(dose.getMedicationId()).orElse(null);
+        if (patient != null && med != null) {
+            String hour = DateTimeFormatter.ofPattern("HH:mm")
+                    .format(dose.getScheduledAt().atZone(ZoneId.of(patient.getTimezone())));
+            alerts.raiseOnce(patient.getId(), AlertType.DOSE_MISSED, dose.getId(), "Dose nao registrada",
+                    "A tampa do compartimento de " + med.getName() + " de " + patient.getName() + " (" + hour
+                            + ") nao foi aberta e a dose foi perdida.");
         }
         return true;
     }

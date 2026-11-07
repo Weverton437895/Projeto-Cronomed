@@ -96,8 +96,18 @@ public class DeviceService {
             throw ApiException.conflict("DEVICE_LIMIT", "Limite de " + props.getDevice().getMaxPerOwner()
                     + " caixas por titular atingido");
         }
-        if (devices.findByMacAddress(mac).isPresent()) {
-            throw ApiException.conflict("DEVICE_EXISTS", "Esta caixa ja esta cadastrada");
+        IotDevice existing = devices.findByMacAddress(mac).orElse(null);
+        if (existing != null) {
+            if (existing.getStatus() != DeviceStatus.REVOKED) {
+                if (existing.getOwnerId().equals(ownerId)) {
+                    throw ApiException.conflict("DEVICE_EXISTS", "Esta caixa ja esta cadastrada na sua conta");
+                }
+                throw ApiException.conflict("DEVICE_EXISTS", "Esta caixa ja esta cadastrada em outra conta. "
+                        + "Desvincule-a la antes de cadastrar aqui");
+            }
+            // Caixa desvinculada (revogada): libera o MAC para novo cadastro. Compartimentos saem em cascata.
+            devices.delete(existing);
+            devices.flush();
         }
         Instant now = clock.instant();
         byte[] secretBytes = new byte[32];

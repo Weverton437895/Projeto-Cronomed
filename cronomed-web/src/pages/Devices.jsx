@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import boxImg from '../assets/box-glow.jpg';
 import Icon from '../components/Icon.jsx';
 import CompartmentIcon from '../components/CompartmentIcon.jsx';
@@ -11,58 +12,6 @@ import { usePatient } from '../context/PatientContext.jsx';
 import { DeviceApi } from '../lib/api.js';
 import { errorMessage } from '../lib/errors.js';
 import { relativeFromNow } from '../lib/format.js';
-import { isValidMac, normalizeMac } from '../lib/validators.js';
-
-function RegisterModal({ onClose }) {
-  const qc = useQueryClient();
-  const [name, setName] = useState('Caixa CronoMed');
-  const [mac, setMac] = useState('');
-  const [errors, setErrors] = useState({});
-  const [formError, setFormError] = useState(null);
-  const [secret, setSecret] = useState(null);
-  const [copied, setCopied] = useState(false);
-  const mut = useMutation({
-    mutationFn: () => DeviceApi.register(normalizeMac(mac), name.trim()),
-    onSuccess: (res) => { qc.invalidateQueries({ queryKey: ['devices'] }); setSecret(res.deviceSecret); },
-    onError: setFormError,
-  });
-  function submit(e) {
-    e.preventDefault();
-    setFormError(null);
-    const er = {};
-    if (!name.trim()) er.name = 'Dê um nome para a caixa.';
-    if (!isValidMac(mac)) er.mac = 'Use o formato AA:BB:CC:DD:EE:FF (impresso na placa ou no monitor serial).';
-    setErrors(er);
-    if (Object.keys(er).length === 0) mut.mutate();
-  }
-  async function copy() {
-    try { await navigator.clipboard.writeText(secret); setCopied(true); } catch { setCopied(false); }
-  }
-  if (secret) {
-    return (
-      <Modal title="Caixa cadastrada" onClose={onClose}>
-        <p className="muted" style={{ lineHeight: 1.55, marginBottom: 14 }}>
-          Esta é a <strong>senha da caixa</strong>. Ela aparece <strong>somente agora</strong>. Copie e coloque em <code>secrets.h</code> (DEVICE_SECRET) no firmware. Não compartilhe nem publique esta senha.
-        </p>
-        <div className="secret-box"><span>{secret}</span><button type="button" onClick={copy}><Icon name="copy" size={16} /> {copied ? 'Copiado' : 'Copiar'}</button></div>
-        <div className="modal-actions"><Button onClick={onClose}>Já guardei a senha</Button></div>
-      </Modal>
-    );
-  }
-  return (
-    <Modal title="Cadastrar caixa" subtitle="Vincule a sua caixa CronoMed (ESP32) à conta." onClose={onClose}>
-      <form onSubmit={submit} noValidate>
-        <FormError error={formError} />
-        <TextField label="Nome da caixa" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} maxLength={80} />
-        <TextField label="Endereço MAC" value={mac} onChange={(e) => setMac(e.target.value.toUpperCase())} error={errors.mac} placeholder="AA:BB:CC:DD:EE:FF" autoComplete="off" />
-        <div className="modal-actions">
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" loading={mut.isPending}>Cadastrar</Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 
 function RenameModal({ device, onClose }) {
   const qc = useQueryClient();
@@ -89,20 +38,22 @@ function RenameModal({ device, onClose }) {
 }
 
 export default function Devices() {
+  const navigate = useNavigate();
   const { patient } = usePatient();
   const qc = useQueryClient();
   const toast = useToast();
   useSubtitle('Dispositivos');
   const devices = useDevices(true);
   const meds = useMedications(patient ? patient.id : null);
-  const [register, setRegister] = useState(false);
   const [rename, setRename] = useState(null);
   const [revoke, setRevoke] = useState(null);
+
   const revokeMut = useMutation({
     mutationFn: (id) => DeviceApi.revoke(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['devices'] }); toast.success('Caixa desvinculada.'); setRevoke(null); },
     onError: (e) => { setRevoke(null); toast.error(errorMessage(e, 'Não foi possível desvincular a caixa.')); },
   });
+
   const now = new Date();
   const list = devices.data || [];
   const medByCompartment = new Map((meds.data || []).filter((m) => m.active !== false && !m.deleted).map((m) => [m.compartmentId, m]));
@@ -111,12 +62,19 @@ export default function Devices() {
     <div className="page">
       <div className="share-head">
         <h2>Minhas caixas</h2>
-        <Button onClick={() => setRegister(true)}><Icon name="plus" size={18} /> Cadastrar caixa</Button>
+        {/* Renderiza o botão superior APENAS se houver 1 ou mais caixas cadastradas */}
+        {list.length > 0 && (
+          <Button onClick={() => navigate('novo')}>
+            <Icon name="plus" size={16} /> Cadastrar caixa
+          </Button>
+        )}
       </div>
+
       <ErrorNotice error={devices.error} onRetry={devices.refetch} />
+
       {devices.isLoading ? <Skeleton height={320} /> : list.length === 0 ? (
-        <EmptyState icon="box" title="Nenhuma caixa cadastrada" action={<Button onClick={() => setRegister(true)}>Cadastrar caixa</Button>}>
-          Informe o endereço MAC da sua caixa para receber a senha de conexão.
+        <EmptyState icon="box" title="Nenhuma caixa cadastrada" action={<Button onClick={() => navigate('novo')}>Cadastrar caixa</Button>}>
+          Sua caixa será configurada e registrada na conta através do pareamento Bluetooth.
         </EmptyState>
       ) : list.map((d) => (
         <div key={d.id} className="dev-layout" style={{ marginBottom: 24 }}>
@@ -140,7 +98,7 @@ export default function Devices() {
           <div className="card dev-card">
             <h2 style={{ fontSize: '1.05rem', marginBottom: 14 }}>Compartimentos</h2>
             <div className="sensor-grid">
-              {[...d.compartments].sort((a, b) => a.index - b.index).map((c) => {
+               {[...d.compartments].sort((a, b) => a.index - b.index).map((c) => {
                 const m = medByCompartment.get(c.id);
                 return (
                   <div key={c.id} className="sensor">
@@ -154,11 +112,18 @@ export default function Devices() {
           </div>
         </div>
       ))}
-      {register && <RegisterModal onClose={() => setRegister(false)} />}
+
       {rename && <RenameModal device={rename} onClose={() => setRename(null)} />}
+
       {revoke && (
-        <ConfirmDialog title="Desvincular caixa?" message={`${revoke.name} deixará de se comunicar com o servidor. Para usar de novo será preciso cadastrar e gerar uma nova senha.`}
-          confirmLabel="Desvincular" loading={revokeMut.isPending} onConfirm={() => revokeMut.mutate(revoke.id)} onCancel={() => setRevoke(null)} />
+        <ConfirmDialog
+          title="Desvincular caixa?"
+          message={`${revoke.name} deixará de se comunicar com o servidor. Para usar de novo será preciso cadastrar novamente via Bluetooth.`}
+          confirmLabel="Desvincular"
+          loading={revokeMut.isPending}
+          onConfirm={() => revokeMut.mutate(revoke.id)}
+          onCancel={() => setRevoke(null)}
+        />
       )}
     </div>
   );

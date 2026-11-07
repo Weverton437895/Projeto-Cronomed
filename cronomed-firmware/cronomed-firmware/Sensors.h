@@ -7,7 +7,8 @@ namespace Sensors {
 
 void begin();
 
-/** Detecta a proxima abertura estavel (fechado -> aberto). Retorna true e preenche comp (1..N). */
-bool pollOpening(uint8_t* comp);
+/** Proxima mudanca estavel de estado. Retorna true e preenche comp (1..N) e opened
+ *  (true = fechado->aberto, false = aberto->fechado). */
+bool poll(uint8_t* comp, bool* opened);
 
 }  // namespace Sensors

@@ -6,3 +6,4 @@ target/
 *.log
 docker/mosquitto/passwd
 firebase-service-account.json
+.env.bak*

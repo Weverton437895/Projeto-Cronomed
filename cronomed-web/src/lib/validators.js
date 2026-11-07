@@ -47,13 +47,16 @@ export function isValidCpf(value = '') {
 
 export function maskPhone(value = '') {
   let d = onlyDigits(value);
-  if (d.startsWith('55') && d.length > 11) d = d.slice(2);
+  // O "+55" escrito pela propria mascara nao pode voltar como digitos (isso gerava "+55 (55) 55...").
+  if (value.trim().startsWith('+')) d = d.replace(/^55/, '');
+  else if (d.startsWith('55') && d.length > 11) d = d.slice(2);
   d = d.slice(0, 11);
   if (d.length === 0) return '';
+  const mid = d.length > 10 ? 7 : 6;
   let out = `+55 (${d.slice(0, 2)}`;
-  if (d.length >= 2) out += ')';
-  if (d.length > 2) out += ' ' + d.slice(2, d.length > 10 ? 7 : 6);
-  if (d.length > (d.length > 10 ? 7 : 6)) out += '-' + d.slice(d.length > 10 ? 7 : 6);
+  // ")" e "-" so aparecem quando ha digitos depois deles; senao o Backspace nao consegue apagar.
+  if (d.length > 2) out += `) ${d.slice(2, mid)}`;
+  if (d.length > mid) out += `-${d.slice(mid)}`;
   return out;
 }
 

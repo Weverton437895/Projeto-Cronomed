@@ -20,10 +20,11 @@ void begin() {
     g_stableOpen[i] = readOpen(i);   // se ligou com a tampa aberta, isso nao gera evento
     g_lastRawOpen[i] = g_stableOpen[i];
     g_lastChange[i] = millis();
+    LOGF("[sensor] compartimento %d inicia %s (GPIO %d)\n", i + 1, g_stableOpen[i] ? "ABERTO" : "FECHADO", REED_PINS[i]);
   }
 }
 
-bool pollOpening(uint8_t* comp) {
+bool poll(uint8_t* comp, bool* opened) {
   uint32_t now = millis();
   for (int i = 0; i < NUM_COMPARTMENTS; i++) {
     bool raw = readOpen(i);
@@ -34,10 +35,10 @@ bool pollOpening(uint8_t* comp) {
     }
     if (raw != g_stableOpen[i] && (now - g_lastChange[i]) >= REED_DEBOUNCE_MS) {
       g_stableOpen[i] = raw;
-      if (raw) {   // fechado -> aberto
-        *comp = (uint8_t)(i + 1);
-        return true;
-      }
+      LOGF("[sensor] compartimento %d %s (GPIO %d)\n", i + 1, raw ? "ABERTO" : "FECHADO", REED_PINS[i]);
+      *comp = (uint8_t)(i + 1);
+      *opened = raw;
+      return true;
     }
   }
   return false;

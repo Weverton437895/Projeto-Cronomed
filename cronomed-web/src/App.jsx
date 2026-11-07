@@ -13,6 +13,7 @@ import Stock from './pages/Stock.jsx';
 import History from './pages/History.jsx';
 import Sharing from './pages/Sharing.jsx';
 import Devices from './pages/Devices.jsx';
+import AddDevice from './pages/AddDevice.jsx';
 import Settings from './pages/Settings.jsx';
 import Profile from './pages/Profile.jsx';
 import Security from './pages/Security.jsx';
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="historico" element={<History />} />
           <Route path="compartilhamento" element={<Guarded need="OWNER"><Sharing /></Guarded>} />
           <Route path="dispositivos" element={<Guarded need="OWNER"><Devices /></Guarded>} />
+          <Route path="dispositivos/novo" element={<Guarded need="OWNER"><AddDevice /></Guarded>} />
           <Route path="configuracoes" element={<Guarded need="OWNER"><Settings /></Guarded>} />
           <Route path="cadastro" element={<Profile />} />
           <Route path="seguranca" element={<Security />} />

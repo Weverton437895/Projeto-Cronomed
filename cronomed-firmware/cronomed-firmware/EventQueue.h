@@ -11,6 +11,9 @@ bool begin();
 /** Registra a abertura do compartimento (1..N). doseId pode ser nullptr quando nao ha dose na janela. */
 void pushOpening(uint8_t comp, const char* doseId);
 
+/** Alarme tocou 60 s sem a tampa ser aberta: a dose deve ser dada como perdida (tipo NOT_OPENED). */
+void pushNotOpened(uint8_t comp, const char* doseId);
+
 size_t size();
 
 /** Monta o JSON {"events":[...]} com ate maxEvents eventos pendentes. Retorna false se a fila esta vazia. */

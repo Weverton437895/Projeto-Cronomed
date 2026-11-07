@@ -2,8 +2,16 @@
 user cronomed-api
 topic readwrite cronomed/#
 
-# Cada caixa (usuario MQTT = MAC sem separadores, ex.: AABBCCDDEEFF) so enxerga os proprios topicos:
-#   publica em  events e heartbeat; le  plan e acks.
+# Usuario compartilhado das caixas (pareamento Bluetooth). Cada caixa publica em events/heartbeat e le plan/acks.
+# Em producao, prefira um usuario por caixa (regras %u abaixo) para que uma caixa nao leia os topicos das outras.
+user cronomed-box
+topic write cronomed/devices/+/events
+topic write cronomed/devices/+/heartbeat
+topic read cronomed/devices/+/plan
+topic read cronomed/devices/+/acks
+
+# Usuarios individuais (usuario = MAC sem separadores), criados com ./scripts/setup-mosquitto.sh add <MAC> <senha>:
+# so enxergam os proprios topicos.
 pattern write cronomed/devices/%u/events
 pattern write cronomed/devices/%u/heartbeat
 pattern read  cronomed/devices/%u/plan

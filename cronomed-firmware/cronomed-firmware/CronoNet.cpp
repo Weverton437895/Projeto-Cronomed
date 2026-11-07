@@ -1,17 +1,26 @@
-#include "Network.h"
+#include "CronoNet.h"
 
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <sys/time.h>
+#include <esp_system.h>
+#if __has_include(<esp_mac.h>)
+#include <esp_mac.h>
+#endif
 
 #include "Battery.h"
 #include "EventQueue.h"
 #include "Plan.h"
+#include "Settings.h"
 #include "config.h"
 #include "secrets.h"
 #include "util.h"
+
+#ifndef MQTT_USER
+#define MQTT_USER ""   // vazio = usa o MAC como usuario (um usuario por caixa no broker)
+#endif
 
 namespace {
 
@@ -74,9 +83,9 @@ void connectWifi() {
   if (WiFi.status() == WL_CONNECTED) return;
   if (g_lastWifiTry != 0 && now - g_lastWifiTry < WIFI_RETRY_MS) return;
   g_lastWifiTry = now;
-  LOGF("[wifi] conectando em %s ...\n", WIFI_SSID);
+  LOGF("[wifi] conectando em %s ...\n", Settings::wifiSsid().c_str());
   WiFi.disconnect();
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(Settings::wifiSsid().c_str(), Settings::wifiPass().c_str());
 }
 
 void connectMqtt() {
@@ -85,10 +94,11 @@ void connectMqtt() {
   if (g_lastMqttTry != 0 && now - g_lastMqttTry < MQTT_RECONNECT_MS) return;
   g_lastMqttTry = now;
 
-  String id = Network::topicId();
-  String clientId = "cronomed-" + id;
-  LOGF("[mqtt] conectando em %s:%d como %s ...\n", MQTT_HOST, MQTT_PORT, id.c_str());
-  if (g_mqtt.connect(clientId.c_str(), id.c_str(), MQTT_PASSWORD)) {
+  String id = CronoNet::topicId();
+  // O client id e sempre o MAC (o ACL do broker usa %c para liberar so os topicos desta caixa).
+  const char* user = MQTT_USER[0] ? MQTT_USER : id.c_str();
+  LOGF("[mqtt] conectando em %s:%d como %s (caixa %s) ...\n", Settings::broker().c_str(), MQTT_PORT, user, id.c_str());
+  if (g_mqtt.connect(id.c_str(), user, MQTT_PASSWORD)) {
     LOGF("[mqtt] conectado\n");
     g_mqtt.subscribe(g_topicPlan.c_str(), 1);   // retido: o plano mais recente chega logo apos conectar
     g_mqtt.subscribe(g_topicAcks.c_str(), 1);
@@ -126,12 +136,20 @@ void sendEvents() {
 
 }  // namespace
 
-namespace Network {
+namespace CronoNet {
 
-String macAddress() { return WiFi.macAddress(); }
+// MAC lido direto do chip (eFuse): WiFi.macAddress() devolve 00:00:00:00:00:00 se o Wi-Fi ainda nao subiu,
+// e isso gerava topicos MQTT com "000000000000".
+String macAddress() {
+  uint8_t m[6] = {0};
+  esp_read_mac(m, ESP_MAC_WIFI_STA);
+  char buf[18];
+  snprintf(buf, sizeof(buf), "%02X:%02X:%02X:%02X:%02X:%02X", m[0], m[1], m[2], m[3], m[4], m[5]);
+  return String(buf);
+}
 
 String topicId() {
-  String mac = WiFi.macAddress();
+  String mac = macAddress();
   mac.replace(":", "");
   mac.toUpperCase();
   return mac;
@@ -159,7 +177,7 @@ void begin() {
 #else
   g_mqtt.setClient(g_plainClient);
 #endif
-  g_mqtt.setServer(MQTT_HOST, MQTT_PORT);
+  g_mqtt.setServer(Settings::broker().c_str(), MQTT_PORT);
   g_mqtt.setBufferSize(MQTT_BUFFER_BYTES);
   g_mqtt.setKeepAlive(30);
   g_mqtt.setCallback(onMessage);
@@ -183,4 +201,4 @@ void loop() {
   }
 }
 
-}  // namespace Network
+}  // namespace CronoNet

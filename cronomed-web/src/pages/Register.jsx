@@ -83,6 +83,7 @@ export default function Register() {
           <FormError error={error} />
           <Button type="submit" size="lg" block>Dados de contato →</Button>
         </form>
+        <p style={{ textAlign: 'center', marginTop: 20 }}>Já tem conta? <Link to="/entrar" style={{ fontWeight: 700 }}>Entrar</Link></p>
       </AuthLayout>
     );
   }
@@ -106,6 +107,7 @@ export default function Register() {
         <FormError error={error} />
         <Button type="submit" size="lg" block loading={loading}>Criar minha conta</Button>
       </form>
+      <p style={{ textAlign: 'center', marginTop: 20 }}>Já tem conta? <Link to="/entrar" style={{ fontWeight: 700 }}>Entrar</Link></p>
     </AuthLayout>
   );
 }

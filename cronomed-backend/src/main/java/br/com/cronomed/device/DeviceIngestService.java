@@ -8,6 +8,7 @@ import br.com.cronomed.config.AppProperties;
 import br.com.cronomed.device.DeviceDtos.DeviceEventIn;
 import br.com.cronomed.device.DeviceDtos.IngestResult;
 import br.com.cronomed.device.DeviceDtos.RejectedEvent;
+import br.com.cronomed.dose.DoseMaintenanceService;
 import br.com.cronomed.dose.DoseService;
 import br.com.cronomed.notification.PushService;
 import java.time.Clock;
@@ -34,16 +35,18 @@ public class DeviceIngestService {
     private final DeviceRepository devices;
     private final CompartmentRepository compartments;
     private final DoseService doseService;
+    private final DoseMaintenanceService maintenance;
     private final AlertService alerts;
     private final PushService push;
     private final AppProperties props;
     private final Clock clock;
 
     public DeviceIngestService(DeviceRepository devices, CompartmentRepository compartments, DoseService doseService,
-                               AlertService alerts, PushService push, AppProperties props, Clock clock) {
+                               DoseMaintenanceService maintenance, AlertService alerts, PushService push, AppProperties props, Clock clock) {
         this.devices = devices;
         this.compartments = compartments;
         this.doseService = doseService;
+        this.maintenance = maintenance;
         this.alerts = alerts;
         this.push = push;
         this.props = props;
@@ -60,13 +63,18 @@ public class DeviceIngestService {
         List<UUID> acked = new ArrayList<>();
         List<DeviceDtos.RejectedEvent> rejected = new ArrayList<>();
         for (DeviceEventIn e : ordered) {
-            if (!"OPENED".equalsIgnoreCase(e.type()) && !"BOX_OPENED".equalsIgnoreCase(e.type())) {
+            boolean notOpened = "NOT_OPENED".equalsIgnoreCase(e.type());
+            if (!notOpened && !"OPENED".equalsIgnoreCase(e.type()) && !"BOX_OPENED".equalsIgnoreCase(e.type())) {
                 rejected.add(new RejectedEvent(e.id(), "UNSUPPORTED_TYPE"));
                 continue;
             }
             try {
-                doseService.recordDeviceOpening(device, e.id(), e.compartment(), e.doseId(), e.occurredAt(),
-                        e.elapsedMs(), e.seq());
+                if (notOpened) {
+                    ingestNotOpened(device, e);
+                } else {
+                    doseService.recordDeviceOpening(device, e.id(), e.compartment(), e.doseId(), e.occurredAt(),
+                            e.elapsedMs(), e.seq());
+                }
                 acked.add(e.id());
             } catch (ApiException ex) {
                 rejected.add(new RejectedEvent(e.id(), ex.getCode())); // erro permanente: nao adianta reenviar
@@ -77,6 +85,20 @@ public class DeviceIngestService {
         }
         touch(device.getId(), null);
         return new IngestResult(acked, rejected);
+    }
+
+    /** Alarme sem abertura da tampa em 60 s: a dose vira MISSED (RF: tampa do compartimento nao aberta). */
+    private void ingestNotOpened(IotDevice device, DeviceEventIn e) {
+        if (e.doseId() == null) {
+            throw ApiException.badRequest("DOSE_REQUIRED", "Evento sem dose associada");
+        }
+        Compartment c = compartments.findByDeviceIdAndIndexNumber(device.getId(), e.compartment())
+                .orElseThrow(() -> ApiException.badRequest("UNKNOWN_COMPARTMENT", "Compartimento inexistente"));
+        if (c.getPatientId() == null) {
+            throw ApiException.badRequest("COMPARTMENT_UNASSIGNED", "Compartimento sem paciente associado");
+        }
+        maintenance.recordNotOpened(e.id(), e.doseId(), c.getPatientId(), device.getId(), e.compartment(),
+                e.occurredAt(), e.seq());
     }
 
     /** Heartbeat (keep alive) com nivel de bateria opcional. */

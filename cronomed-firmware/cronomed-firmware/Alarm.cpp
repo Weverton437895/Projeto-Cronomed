@@ -1,13 +1,9 @@
 #include "Alarm.h"
 
-#include <Adafruit_NeoPixel.h>
-
 #include "Plan.h"
 #include "config.h"
 
 namespace {
-
-Adafruit_NeoPixel strip(NUM_COMPARTMENTS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
 void buzzerAttach() { ledcAttach(BUZZER_PIN, BUZZER_FREQ_HZ, 8); }
@@ -21,73 +17,128 @@ void buzzerAttach() {
 void buzzerTone(bool on) { ledcWriteTone(BUZZER_CHANNEL, on ? BUZZER_FREQ_HZ : 0); }
 #endif
 
-uint32_t scale(uint32_t rgb) {
-  uint8_t r = (uint8_t)(((rgb >> 16) & 0xFF) * LED_BRIGHTNESS / 255);
-  uint8_t g = (uint8_t)(((rgb >> 8) & 0xFF) * LED_BRIGHTNESS / 255);
-  uint8_t b = (uint8_t)((rgb & 0xFF) * LED_BRIGHTNESS / 255);
-  return strip.Color(r, g, b);
+inline void ledWrite(int i, bool on) {
+  digitalWrite(LED_PINS[i], on ? LED_ON_LEVEL : !LED_ON_LEVEL);
 }
 
 bool g_buzzerOn = false;
-uint32_t g_lastColor[NUM_COMPARTMENTS];   // ultimo valor enviado aos LEDs (so atualiza a fita quando muda)
+bool g_ledState[NUM_COMPARTMENTS];
+
+// Confirmacao de fechamento (nao bloqueante).
+uint32_t g_confirmStart = 0;
+uint8_t g_confirmComp = 0;
+const uint32_t CONFIRM_TOTAL_MS = 4UL * CONFIRM_FLASH_MS;   // aceso, apagado, aceso, apagado
+
+// Alarme tocando (por compartimento) e doses que estouraram o tempo limite sem abertura.
+bool g_ringing[NUM_COMPARTMENTS];
+char g_ringId[NUM_COMPARTMENTS][37];
+bool g_missedPending[NUM_COMPARTMENTS];
+char g_missedId[NUM_COMPARTMENTS][37];
 
 }  // namespace
 
 namespace Alarm {
 
 void begin() {
-  strip.begin();
-  strip.clear();
-  strip.show();
-  for (int i = 0; i < NUM_COMPARTMENTS; i++) g_lastColor[i] = 0;
+  for (int i = 0; i < NUM_COMPARTMENTS; i++) {
+    pinMode(LED_PINS[i], OUTPUT);
+    ledWrite(i, false);
+    g_ledState[i] = false;
+  }
   buzzerAttach();
+  buzzerTone(false);
+}
+
+void blip(uint16_t ms) {
+  buzzerTone(true);
+  delay(ms);
   buzzerTone(false);
 }
 
 void selfTest() {
   for (int i = 0; i < NUM_COMPARTMENTS; i++) {
-    strip.setPixelColor(i, scale(Plan::colorFor(i + 1)));
-    strip.show();
+    ledWrite(i, true);
     delay(120);
+    ledWrite(i, false);
   }
-  buzzerTone(true);
-  delay(120);
-  buzzerTone(false);
-  delay(300);
-  strip.clear();
-  strip.show();
-  for (int i = 0; i < NUM_COMPARTMENTS; i++) g_lastColor[i] = 0;
+  blip(120);
+}
+
+bool takeMissed(uint8_t* comp, char* doseId) {
+  for (int i = 0; i < NUM_COMPARTMENTS; i++) {
+    if (g_missedPending[i]) {
+      g_missedPending[i] = false;
+      *comp = (uint8_t)(i + 1);
+      strncpy(doseId, g_missedId[i], 36);
+      doseId[36] = 0;
+      return true;
+    }
+  }
+  return false;
+}
+
+void confirmClosed(uint8_t comp) {
+  if (comp < 1 || comp > NUM_COMPARTMENTS) return;
+  g_confirmComp = comp;
+  g_confirmStart = millis();
+  if (g_confirmStart == 0) g_confirmStart = 1;
 }
 
 void update(uint32_t now) {
   uint32_t ms = millis();
   bool anyActive = false;
-  bool anyFast = false;
-  bool changed = false;
+  bool anyUrgent = false;
+
+  // Confirmacao de fechamento tem prioridade sobre o resto durante ~320 ms.
+  bool confirming = false;
+  bool confirmOn = false;
+  if (g_confirmStart != 0) {
+    uint32_t el = ms - g_confirmStart;
+    if (el < CONFIRM_TOTAL_MS) {
+      confirming = true;
+      confirmOn = ((el / CONFIRM_FLASH_MS) % 2) == 0;
+    } else {
+      g_confirmStart = 0;
+      g_confirmComp = 0;
+    }
+  }
 
   for (int i = 0; i < NUM_COMPARTMENTS; i++) {
     PlanDose* d = Plan::findActive((uint8_t)(i + 1), now);
-    uint32_t color = 0;
-    if (d) {
+    bool led = false;
+    uint32_t elapsed = d ? (now - d->t) : 0;
+    if (d && elapsed < ALARM_TIMEOUT_S) {
       anyActive = true;
-      bool fast = (now - d->t) >= ALARM_INTENSIFY_AFTER_S;
-      anyFast = anyFast || fast;
-      uint32_t period = fast ? ALARM_FAST_PERIOD_MS : ALARM_SLOW_PERIOD_MS;
-      bool lit = (ms % period) < (period / 2);   // LED pisca no mesmo ritmo do bipe
-      color = lit ? scale(Plan::colorFor((uint8_t)(i + 1))) : 0;
+      g_ringing[i] = true;
+      strncpy(g_ringId[i], d->id, 36);
+      g_ringId[i][36] = 0;
+      bool urgent = elapsed >= ALARM_INTENSIFY_AFTER_S;
+      anyUrgent = anyUrgent || urgent;
+      uint32_t half = urgent ? ALARM_LED_FAST_HALF_MS : ALARM_LED_SLOW_HALF_MS;
+      led = ((ms / half) % 2) == 0;
+    } else if (d && g_ringing[i] && strcmp(g_ringId[i], d->id) == 0) {
+      // Tocou durante o tempo limite e a tampa nao foi aberta: para o alarme e avisa o loop principal.
+      g_ringing[i] = false;
+      g_missedPending[i] = true;
+      strncpy(g_missedId[i], d->id, 36);
+      g_missedId[i][36] = 0;
+    } else if (!d) {
+      g_ringing[i] = false;   // tampa aberta (dose atendida) ou fora da janela
     }
-    if (color != g_lastColor[i]) {
-      g_lastColor[i] = color;
-      strip.setPixelColor(i, color);
-      changed = true;
+    if (confirming && g_confirmComp == i + 1) led = confirmOn;
+    if (led != g_ledState[i]) {
+      g_ledState[i] = led;
+      ledWrite(i, led);
     }
   }
-  if (changed) strip.show();
 
   bool beep = false;
-  if (anyActive) {
-    uint32_t period = anyFast ? ALARM_FAST_PERIOD_MS : ALARM_SLOW_PERIOD_MS;
-    beep = (ms % period) < ALARM_BEEP_MS;
+  if (confirming) {
+    beep = confirmOn;
+  } else if (anyActive) {
+    uint32_t period = anyUrgent ? ALARM_FAST_PERIOD_MS : ALARM_SLOW_PERIOD_MS;
+    uint32_t beepMs = anyUrgent ? ALARM_FAST_BEEP_MS : ALARM_BEEP_MS;
+    beep = (ms % period) < beepMs;
   }
   if (beep != g_buzzerOn) {
     g_buzzerOn = beep;

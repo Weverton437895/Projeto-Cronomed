@@ -95,6 +95,7 @@ export default function Landing() {
               <p className="lead">O CronoMed une uma caixa de medicamentos com alarme, um aplicativo e um painel compartilhado. Você lembra, confirma e quem você escolher acompanha.</p>
               <div className="hero-ctas">
                 <Link className="btn btn-primary btn-lg" to="/cadastro">Criar minha conta</Link>
+                <Link className="btn btn-outline btn-lg" to="/entrar">Já tenho conta · Entrar</Link>
                 <a className="btn btn-outline btn-lg" href="#como-funciona">Ver como funciona</a>
               </div>
               <div className="checks">

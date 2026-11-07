@@ -12,6 +12,7 @@ namespace {
 struct DeviceEvent {
   char id[37];
   uint8_t comp;
+  uint8_t kind;      // 0 = abertura (BOX_OPENED), 1 = tampa nao aberta (NOT_OPENED)
   char doseId[37];
   uint32_t epoch;    // horario UTC do evento; 0 se o relogio ainda nao estava sincronizado
   uint32_t bootId;   // numero da inicializacao em que ocorreu (para usar elapsedMs)
@@ -34,6 +35,7 @@ void save() {
     JsonObject o = arr.add<JsonObject>();
     o["id"] = g_events[i].id;
     o["c"] = g_events[i].comp;
+    o["k"] = g_events[i].kind;
     o["d"] = g_events[i].doseId;
     o["e"] = g_events[i].epoch;
     o["b"] = g_events[i].bootId;
@@ -59,6 +61,7 @@ void load() {
     Util::copyStr(e.id, sizeof(e.id), o["id"] | "");
     if (strlen(e.id) != 36) continue;
     e.comp = o["c"] | 0;
+    e.kind = o["k"] | 0;
     Util::copyStr(e.doseId, sizeof(e.doseId), o["d"] | "");
     e.epoch = o["e"] | 0u;
     e.bootId = o["b"] | 0u;
@@ -82,7 +85,7 @@ bool begin() {
   return true;
 }
 
-void pushOpening(uint8_t comp, const char* doseId) {
+static void pushEvent(uint8_t kind, uint8_t comp, const char* doseId) {
   if (g_count >= MAX_EVENTS) {
     // Fila cheia: descarta o mais antigo para sempre guardar os eventos recentes.
     memmove(&g_events[0], &g_events[1], sizeof(DeviceEvent) * (MAX_EVENTS - 1));
@@ -92,6 +95,7 @@ void pushOpening(uint8_t comp, const char* doseId) {
   DeviceEvent& e = g_events[g_count];
   Util::makeUuid(e.id);
   e.comp = comp;
+  e.kind = kind;
   Util::copyStr(e.doseId, sizeof(e.doseId), doseId);
   e.epoch = Util::nowEpoch();
   e.bootId = g_bootId;
@@ -100,8 +104,13 @@ void pushOpening(uint8_t comp, const char* doseId) {
   g_prefs.putUInt("seq", g_seq);
   g_count++;
   save();
-  LOGF("[eventos] abertura do compartimento %u registrada (dose=%s)\n", comp, e.doseId[0] ? e.doseId : "-");
+  LOGF("[eventos] %s do compartimento %u registrada (dose=%s)\n",
+       kind ? "tampa NAO aberta" : "abertura", comp, e.doseId[0] ? e.doseId : "-");
 }
+
+void pushOpening(uint8_t comp, const char* doseId) { pushEvent(0, comp, doseId); }
+
+void pushNotOpened(uint8_t comp, const char* doseId) { pushEvent(1, comp, doseId); }
 
 size_t size() { return g_count; }
 
@@ -116,7 +125,7 @@ bool buildPayload(String& out, size_t maxEvents) {
     o["id"] = e.id;
     o["compartment"] = e.comp;
     if (e.doseId[0]) o["doseId"] = e.doseId;
-    o["type"] = "BOX_OPENED";
+    o["type"] = e.kind ? "NOT_OPENED" : "BOX_OPENED";
     if (e.epoch != 0) {
       char iso[24];
       Util::isoUtc(e.epoch, iso, sizeof(iso));

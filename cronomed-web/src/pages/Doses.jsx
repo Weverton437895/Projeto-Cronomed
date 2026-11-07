@@ -107,6 +107,8 @@ function DosesInner() {
   const dash = useDashboard(patient.id, useMemo(() => daysAgo(30, new Date()).toISOString(), []), useMemo(() => new Date().toISOString(), []));
   const [openId, setOpenId] = useState(null);
   const [dismissed, setDismissed] = useState(() => new Set());
+  // "Ainda nao": o lembrete so volta depois de alguns minutos (antes reabria na hora e empilhava avisos).
+  const [snoozed, setSnoozed] = useState(() => new Map());
 
   const medById = useMemo(() => new Map(meds.map((m) => [m.id, m])), [meds]);
   const list = doses.data || [];
@@ -116,9 +118,9 @@ function DosesInner() {
   // Abre o lembrete sozinho quando uma dose esta "no ar" (horario previsto ate o fim da tolerancia).
   useEffect(() => {
     if (openId || !canConfirm || !prefs.doseReminders) return;
-    const due = list.find((d) => isDue(d, now) && !dismissed.has(d.id));
+    const due = list.find((d) => isDue(d, now) && !dismissed.has(d.id) && !((snoozed.get(d.id) || 0) > Date.now()));
     if (due) setOpenId(due.id);
-  }, [list, now, openId, dismissed, canConfirm, prefs.doseReminders]);
+  }, [list, now, openId, dismissed, snoozed, canConfirm, prefs.doseReminders]);
 
   useEffect(() => {
     if (openDose && !['PENDING', 'OPENED_UNCONFIRMED'].includes(openDose.status)) setOpenId(null);
@@ -132,7 +134,8 @@ function DosesInner() {
         occurredAt: new Date().toISOString(),
         justification: type === 'POSTPONED' ? 'Paciente informou que ainda não tomou.' : undefined,
       }),
-    onSuccess: (res, { type }) => {
+    onSuccess: (res, { dose, type }) => {
+      if (type === 'POSTPONED') setSnoozed((m) => new Map(m).set(dose.id, Date.now() + 5 * 60 * 1000));
       qc.invalidateQueries({ queryKey: ['doses'] });
       qc.invalidateQueries({ queryKey: ['medications', patient.id] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });

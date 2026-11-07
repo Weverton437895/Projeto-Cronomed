@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-namespace Network {
+namespace CronoNet {
 
 void begin();
 
@@ -18,4 +18,4 @@ String macAddress();
 
 bool mqttConnected();
 
-}  // namespace Network
+}  // namespace CronoNet

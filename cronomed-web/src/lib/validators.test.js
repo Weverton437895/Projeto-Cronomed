@@ -22,6 +22,15 @@ describe('validators', () => {
     expect(maskPhone('13999998888')).toBe('+55 (13) 99999-8888');
     expect(maskDate('01012000')).toBe('01/01/2000');
   });
+  it('mascara de telefone permite digitar e apagar', () => {
+    let v = '';
+    for (const ch of '13987654321') v = maskPhone(v + ch);
+    expect(v).toBe('+55 (13) 98765-4321');
+    for (let i = 0; i < 11; i++) v = maskPhone(v.slice(0, -1));
+    expect(v).toBe('');
+    expect(maskPhone('+55 (13)')).toBe('+55 (13');
+    expect(maskPhone('5513987654321')).toBe('+55 (13) 98765-4321');
+  });
   it('normaliza MAC', () => {
     expect(isValidMac('aa:bb:cc:dd:ee:ff')).toBe(true);
     expect(isValidMac('aa:bb')).toBe(false);
